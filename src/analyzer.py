@@ -6,6 +6,7 @@ import time
 from typing import Dict, Any
 from dotenv import load_dotenv
 import requests
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(
@@ -21,17 +22,12 @@ class AIMarketAnalyzer:
         load_dotenv(override=True)
         
         self.cmc_api_key = os.getenv('CMC_API_KEY')
-        self.openai_key = os.getenv('OPENAI_API_KEY')
+        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        # Set up API headers
+        # Set up CMC API headers
         self.cmc_headers = {
             'X-CMC_PRO_API_KEY': self.cmc_api_key,
             'Accept': 'application/json'
-        }
-        
-        self.openai_headers = {
-            "Authorization": f"Bearer {self.openai_key}",
-            "Content-Type": "application/json"
         }
         
         logger.info("AI Market Analyzer initialized")
@@ -130,32 +126,24 @@ Keep the analysis concise but data-driven. Include specific numbers and percenta
                 ]
             }
 
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers=self.openai_headers,
-                json={
-                    "model": "gpt-4-turbo-preview",
-                    "messages": [
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": f"Please analyze this market data:\n{json.dumps(data_summary, indent=2)}"}
-                    ],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0.7
-                }
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4-turbo-preview",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"Please analyze this market data:\n{json.dumps(data_summary, indent=2)}"}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7
             )
             
-            if response.status_code == 200:
-                analysis = response.json()['choices'][0]['message']['content']
-                
-                # Save analysis for inspection
-                with open('last_analysis.json', 'w') as f:
-                    json.dump(json.loads(analysis), f, indent=2)
-                
-                logger.info("Analysis completed and saved to last_analysis.json")
-                return json.loads(analysis)
-            else:
-                logger.error(f"OpenAI API error: {response.text}")
-                return None
+            analysis = json.loads(response.choices[0].message.content)
+            
+            # Save analysis for inspection
+            with open('last_analysis.json', 'w') as f:
+                json.dump(analysis, f, indent=2)
+            
+            logger.info("Analysis completed and saved to last_analysis.json")
+            return analysis
 
         except Exception as e:
             logger.error(f"Error in AI analysis: {str(e)}")
