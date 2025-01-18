@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  fetcher:
+    build: .
+    container_name: cmc-fetcher
+    restart: always
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python src/fetcher.py
+    networks:
+      - cmc-network
+
+  tracked-collector:
+    build: .
+    container_name: cmc-tracked-collector
+    restart: always
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python src/tracked_collector.py
+    networks:
+      - cmc-network
+
+networks:
+  cmc-network:
+    driver: bridge
