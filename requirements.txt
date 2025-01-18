@@ -1,0 +1,5 @@
+python-dotenv==1.0.0
+supabase==2.3.0
+requests==2.31.0
+pandas==2.2.0
+python-logging-json==0.2.1
